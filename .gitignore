@@ -1,0 +1,8 @@
+venv/
+output/
+__pycache__/
+*.pyc
+.env
+.env.*
+staging/
+*.zip

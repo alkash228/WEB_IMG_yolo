@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+
+<html lang="ru">
+
+<head>
+
+  <meta charset="UTF-8" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <title>Папка → YOLO (SAM3)</title>
+
+  <link rel="stylesheet" href="/static/style.css" />
+
+</head>
+
+<body>
+
+  <div id="viewSetup" class="view">
+
+    <div class="wrap">
+
+      <header class="head">
+
+        <h1>Папка изображений → YOLO</h1>
+
+        <p class="muted">SAM3 (только боксы), классы как в студии: Helmet / person_head</p>
+
+      </header>
+
+
+
+      <section class="panel">
+
+        <h2>Настройки</h2>
+
+        <label class="sam-api-field">IP / URL SAM API
+
+          <input
+
+            type="text"
+
+            id="apiUrl"
+
+            placeholder="http://10.x.x.x:8080"
+
+            value="http://127.0.0.1:8080"
+
+            spellcheck="false"
+
+            autocomplete="off"
+
+          />
+
+          <span class="hint">Локально: <code>http://127.0.0.1:8080</code></span>
+
+        </label>
+
+        <div class="grid setup-fields">
+
+          <label>Промпт субъекта (голова)
+
+            <input type="text" id="subjectPrompt" value="person head" />
+
+          </label>
+
+          <label>Промпт пробы (каска)
+
+            <input type="text" id="probePrompt" value="helmet" />
+
+          </label>
+
+          <label>Порог SAM
+
+            <input type="number" id="threshold" min="0" max="1" step="0.05" value="0.5" />
+
+          </label>
+
+          <label>Доля val
+
+            <input type="number" id="valRatio" min="0.05" max="0.5" step="0.05" value="0.2" />
+
+          </label>
+
+          <label>Seed split
+
+            <input type="number" id="seed" value="42" />
+
+          </label>
+
+        </div>
+
+        <div class="row">
+
+          <button type="button" id="btnHealth" class="btn btn--ghost">Проверить SAM</button>
+
+          <span id="healthStatus" class="muted"></span>
+
+        </div>
+
+      </section>
+
+
+
+      <section class="panel">
+
+        <h2>Изображения</h2>
+
+        <label class="pick">
+
+          <input type="file" id="folderInput" webkitdirectory directory multiple hidden />
+
+          <span class="btn">Выбрать папку</span>
+
+        </label>
+
+        <p id="folderInfo" class="muted">Папка не выбрана</p>
+
+        <div id="thumbRow" class="thumbs"></div>
+
+      </section>
+
+
+
+      <section class="panel">
+
+        <button type="button" id="btnRunSam" class="btn btn--primary" disabled>Прогнать SAM</button>
+
+        <div class="progress" id="samProgressWrap" hidden>
+
+          <div class="progress__bar" id="progressBar"></div>
+
+        </div>
+
+        <p id="progressText" class="progress-label muted"></p>
+
+        <p id="progressFile" class="progress-file muted"></p>
+
+        <dl class="stats" id="stats">
+
+          <div><dt>Helmet (SAM)</dt><dd id="statPos">0</dd></div>
+
+          <div><dt>person_head (SAM)</dt><dd id="statNeg">0</dd></div>
+
+          <div><dt>Пропущено (нет голов)</dt><dd id="statSkip">0</dd></div>
+
+          <div><dt>Ошибки</dt><dd id="statErr">0</dd></div>
+
+        </dl>
+
+      </section>
+
+    </div>
+
+  </div>
+
+
+
+  <div id="viewValidation" class="view view--hidden">
+
+    <div class="wrap wrap--wide">
+
+      <header class="head head--row">
+
+        <div>
+
+          <h1>Валидация боксов</h1>
+
+          <p id="valSubtitle" class="muted">Проверьте детекции перед сборкой YOLO</p>
+
+        </div>
+
+        <button type="button" id="btnBackSetup" class="btn btn--ghost">← Настройки</button>
+
+      </header>
+
+
+
+      <div class="val-stats" id="valStats"></div>
+
+
+
+      <div class="val-layout">
+
+        <aside class="val-strip-wrap">
+
+          <div id="filmstrip" class="filmstrip"></div>
+
+        </aside>
+
+        <main class="val-main">
+
+          <div class="val-toolbar">
+
+            <button type="button" id="btnPrev" class="btn btn--ghost" title="←">‹</button>
+
+            <span id="frameLabel" class="frame-label">—</span>
+
+            <button type="button" id="btnNext" class="btn btn--ghost" title="→">›</button>
+
+          </div>
+
+          <div id="frameView" class="frame-view">
+
+            <img id="frameImg" alt="" crossorigin="anonymous" />
+
+            <canvas id="frameCanvas"></canvas>
+
+          </div>
+
+          <div class="row det-actions">
+            <button type="button" id="btnDetDrop" class="btn btn--ghost btn--sm">Удалить бокс</button>
+            <button type="button" id="btnDetClass" class="btn btn--ghost btn--sm">Сменить класс</button>
+          </div>
+
+          <ul id="detList" class="det-list"></ul>
+
+        </main>
+
+      </div>
+
+
+
+      <section class="panel val-footer">
+
+        <div class="row val-actions">
+
+          <button type="button" id="btnBuildYolo" class="btn btn--primary">Собрать YOLO</button>
+
+          <a id="downloadLink" class="btn btn--ghost" hidden href="#">Скачать ZIP</a>
+
+        </div>
+
+        <p id="buildResult" class="muted"></p>
+
+        <p class="hint muted">Клавиши: ← → — кадры · Delete — убрать бокс · C — сменить класс</p>
+
+      </section>
+
+    </div>
+
+  </div>
+
+
+
+  <div id="toasts"></div>
+
+  <script src="/static/app.js"></script>
+
+</body>
+
+</html>
+
